@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+    driver-payable-mysql:
+        container_name: driver-payable-mysql
+        image: mysql:latest
+        restart: always
+        env_file:
+            - .env
+        environment:
+            - MYSQL_DATABASE=${DB_DATABASE}
+            - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+            - MYSQL_ALLOW_EMPTY_PASSWORD="yes"
+        ports:
+            - "3306:3306"
+        volumes:
+            - ./etc/datebases:/docker-entrypoint-initdb.d
+        expose:
+            - "3360"
+    driver-payable-auth-nginx:
+        image: nginx:1.19-alpine
+        container_name: driver-payable-auth-nginx
+        restart: always
+        ports:
+            - "8001:80"
+        volumes:
+            - ./:/var/www
+            - ./etc/nginx/conf.d:/etc/nginx/conf.d
+    driver-payable-php:
+        container_name: driver-payable-php
+        build:
+            context: ./
+            dockerfile: Dockerfile
+        restart: unless-stopped
+        volumes:
+            - ./:/var/www
+            - ./etc/php/php.ini:/usr/local/etc/php/php.ini
+            - /tmp/xdebug:/tmp/xdebug
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
+        depends_on:
+            - driver-payable-mysql
